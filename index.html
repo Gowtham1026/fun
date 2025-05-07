@@ -3,41 +3,67 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Flappy Bird</title>
+  <title>Flappy Bird with Levels</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
       background: #70c5ce;
+      font-family: Arial, sans-serif;
     }
     canvas {
       display: block;
       margin: 0 auto;
     }
+    #restartBtn {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 12px 24px;
+      font-size: 18px;
+      background-color: #ff4c4c;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
   </style>
 </head>
 <body>
   <canvas id="flappyCanvas" width="400" height="600"></canvas>
+  <button id="restartBtn">Restart</button>
+
   <script>
     const canvas = document.getElementById("flappyCanvas");
     const ctx = canvas.getContext("2d");
+    const restartBtn = document.getElementById("restartBtn");
 
     const birdImg = new Image();
-    birdImg.src = "sam.png"; // Make sure bird.png is in the same folder
+    birdImg.src = "sam.png"; // Ensure 'sam.png' is in the same folder
 
-    let bird = {
-      x: 50,
-      y: 150,
-      width: 40,
-      height: 40,
-      gravity: 0.6,
-      lift: -10,
-      velocity: 0
-    };
+    let bird, pipes, score, gameOver, level, pipeSpeed;
 
-    let pipes = [];
-    let score = 0;
-    let gameOver = false;
+    function initGame() {
+      bird = {
+        x: 50,
+        y: 150,
+        width: 40,
+        height: 40,
+        gravity: 0.6,
+        lift: -10,
+        velocity: 0
+      };
+      pipes = [];
+      score = 0;
+      level = 1;
+      pipeSpeed = 2; // start slow
+      gameOver = false;
+      restartBtn.style.display = "none";
+      loop();
+    }
 
     function drawBird() {
       ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
@@ -53,6 +79,7 @@
       ctx.fillStyle = "white";
       ctx.font = "24px Arial";
       ctx.fillText("Score: " + score, 10, 30);
+      ctx.fillText("Level: " + level, 10, 60);
     }
 
     function update() {
@@ -63,27 +90,39 @@
 
       if (bird.y + bird.height > canvas.height || bird.y < 0) {
         gameOver = true;
+        restartBtn.style.display = "block";
+        return;
       }
 
       pipes.forEach(pipe => {
-        pipe.x -= 2;
+        pipe.x -= pipeSpeed;
 
+        // Collision detection
         if (
           bird.x < pipe.x + pipe.width &&
           bird.x + bird.width > pipe.x &&
           (bird.y < pipe.top || bird.y + bird.height > pipe.top + pipe.gap)
         ) {
           gameOver = true;
+          restartBtn.style.display = "block";
         }
 
+        // Scoring and level increase
         if (!pipe.passed && pipe.x + pipe.width < bird.x) {
           pipe.passed = true;
           score++;
+
+          if (score % 5 === 0) {
+            level++;
+            pipeSpeed += 0.5; // increase difficulty
+          }
         }
       });
 
+      // Remove off-screen pipes
       pipes = pipes.filter(pipe => pipe.x + pipe.width > 0);
 
+      // Generate new pipe
       if (pipes.length === 0 || pipes[pipes.length - 1].x < 250) {
         const top = Math.random() * (canvas.height - 200);
         pipes.push({
@@ -115,17 +154,20 @@
       if (!gameOver) requestAnimationFrame(loop);
     }
 
+    // Controls
     document.addEventListener("keydown", e => {
       if (e.code === "Space") bird.velocity = bird.lift;
     });
-
     document.addEventListener("click", () => {
       bird.velocity = bird.lift;
     });
 
-    birdImg.onload = () => {
-      loop(); // start only after image loads
-    };
+    // Restart Button
+    restartBtn.addEventListener("click", initGame);
+
+    // Start the game after image loads
+    birdImg.onload = initGame;
   </script>
 </body>
 </html>
+
